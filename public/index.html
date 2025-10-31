@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Чат-бот магазину вітамінів 🇺🇦</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --header-footer-color: #4B8451;
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #f5f5f5;
+            --bg-tertiary: #4B8451;
+            --user-msg-bg: #4B8451;
+            --bot-msg-bg: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-color: #e0e0e0;
+            --accent-color: #4B8451;
+            --success-color: #4B8451;
+            --error-color: #E37B54;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Header */
+        .chat-header {
+            background: var(--bg-tertiary);
+            padding: 20px 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .bot-avatar {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(75, 132, 81, 0.3);
+            overflow: hidden;
+        }
+
+        .bot-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .bot-details h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: white;
+        }
+
+        .bot-status {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .operator-btn {
+            background: white;
+            color: var(--accent-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .operator-btn:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+        }
+
+        .operator-btn img {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+        }
+
+        .social-btn {
+            background: white;
+            color: var(--accent-color);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+        }
+
+        .social-btn:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+        }
+
+        .social-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Chat Messages Area */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #3a4556;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 85%;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message.bot {
+            align-self: flex-start;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .message.user .message-avatar {
+            background: #E9F4E4;
+        }
+
+        .message.bot .message-avatar {
+            background: linear-gradient(135deg, var(--accent-color), var(--user-msg-bg));
+        }
+
+        .message-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.5;
+            font-size: 15px;
+            word-wrap: break-word;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .message.user .message-bubble {
+            background: var(--user-msg-bg);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot .message-bubble {
+            background: var(--bot-msg-bg);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--text-secondary);
+            padding: 0 4px;
+        }
+
+        /* Products Cards */
+        .products-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .product-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(75, 132, 81, 0.2);
+            border-color: var(--accent-color);
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .product-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--accent-color);
+            flex: 1;
+        }
+
+        .product-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--success-color);
+            white-space: nowrap;
+            margin-left: 12px;
+        }
+
+        .product-brand {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .product-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .product-detail {
+            color: var(--text-secondary);
+        }
+
+        .product-detail strong {
+            color: var(--text-primary);
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            max-width: 85%;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+        }
+
+        .typing-bubble {
+            background: var(--bot-msg-bg);
+            padding: 16px 20px;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        /* Input Area */
+        .chat-input-container {
+            background: var(--bg-tertiary);
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: white;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 14px 18px;
+            border-radius: 24px;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(75, 132, 81, 0.2);
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .send-btn {
+            background: var(--error-color);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(227, 123, 84, 0.3);
+        }
+
+        .send-btn:hover:not(:disabled) {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(227, 123, 84, 0.5);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Welcome Message */
+        .welcome-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .welcome-message h2 {
+            color: var(--accent-color);
+            margin-bottom: 12px;
+            font-size: 24px;
+        }
+
+        .welcome-message p {
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .disclaimer {
+            font-size: 11px;
+            color: #999999;
+            line-height: 1.4;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Error Message */
+        .error-message {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin: 10px 20px;
+            font-size: 14px;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .container {
+                max-width: 100%;
+                border-radius: 0;
+            }
+
+            .chat-header {
+                padding: 16px 20px;
+            }
+
+            .bot-avatar {
+                width: 42px;
+                height: 42px;
+                font-size: 20px;
+            }
+
+            .bot-details h1 {
+                font-size: 16px;
+            }
+
+            .clear-btn {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
+            .clear-btn span {
+                display: none;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+
+            .product-details {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Info Badge */
+        .info-badge {
+            background: rgba(0, 217, 255, 0.2);
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            margin-top: 8px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="header-info">
+                <div class="bot-avatar">
+                    <img src="/assets/logo.png" alt="Logo">
+                </div>
+                <div class="bot-details">
+                    <h1>BIOTUS Helper</h1>
+                    <div class="bot-status">
+                        <span class="status-dot"></span>
+                        <span>Онлайн</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-buttons">
+                <button class="operator-btn" onclick="connectOperator()">
+                    <img src="/assets/operator.svg" alt="Operator">
+                    Підключити оператора
+                </button>
+                <button class="social-btn" onclick="openTelegram()" title="Telegram">
+                    <img src="/assets/telegram.svg" alt="Telegram">
+                </button>
+                <button class="social-btn" onclick="openViber()" title="Viber">
+                    <img src="/assets/viber.svg" alt="Viber">
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <h2>Вітаємо! 👋</h2>
+                <p>
+                    Я - новий AI-помічник для клієнтів компанії Biotus!<br><br>
+                    Якщо вам потрібна консультація наших професійних нутриціологів, ви завжди можете звернутися до наших операторів через чат, Telegram або Viber.
+                </p>
+                <div class="disclaimer">
+                    ⚠️ Відмова від відповідальності: Інформація, надана цим AI-помічником, носить виключно інформаційний характер і не є медичною консультацією. Перед прийомом будь-яких добавок рекомендуємо проконсультуватися з лікарем або кваліфікованим фахівцем.
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="message-avatar">
+                <img src="/assets/logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+            </div>
+            <div class="typing-bubble">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-container">
+            <div class="input-wrapper">
+                <input
+                    type="text"
+                    class="chat-input"
+                    id="messageInput"
+                    placeholder="Запитайте про вітаміни..."
+                    onkeypress="handleKeyPress(event)"
+                />
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Session ID для збереження контексту розмови
+        let sessionId = null;
+        const API_URL = 'http://localhost:3000';
+
+        // Елементи DOM
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        // Відправка повідомлення при натисканні Enter
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Відправка повідомлення
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+
+            if (!message) return;
+
+            // Додаємо повідомлення користувача
+            addUserMessage(message);
+            messageInput.value = '';
+
+            // Показуємо індикатор друкування
+            showTypingIndicator();
+
+            // Блокуємо кнопку відправки
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        sessionId: sessionId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Помилка сервера');
+                }
+
+                // Зберігаємо sessionId
+                if (data.data && data.data.sessionId) {
+                    sessionId = data.data.sessionId;
+                }
+
+                // Ховаємо індикатор друкування
+                hideTypingIndicator();
+
+                // Додаємо відповідь бота
+                if (data.data && data.data.response) {
+                    addBotMessage(data.data.response, data.data.productsFound);
+                }
+
+            } catch (error) {
+                console.error('Помилка:', error);
+                hideTypingIndicator();
+                addErrorMessage(error.message || 'Не вдалося отримати відповідь від сервера');
+            } finally {
+                sendBtn.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        // Додати повідомлення користувача
+        function addUserMessage(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user';
+            messageDiv.innerHTML = `
+                <div class="message-avatar">
+                    <img src="/assets/user.svg" alt="User" style="width: 60%; height: 60%; object-fit: contain;">
+                </div>
+                <div class="message-content">
+                    <div class="message-bubble">${escapeHtml(text)}</div>
+                    <div class="message-time">${getCurrentTime()}</div>
+                </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // Додати повідомлення бота
+        function addBotMessage(text, productsFound = 0) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+
+            // Парсимо товари з відповіді (якщо є структура)
+            const products = parseProducts(text);
+            const messageText = products.length > 0 ? removeProductsFromText(text) : text;
+
+            let html = `
+                <div class="message-avatar">
+                    <img src="/assets/logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                </div>
+                <div class="message-content">
+                    <div class="message-bubble">${formatBotMessage(messageText)}</div>
+            `;
+
+            // Якщо знайдено товари, додаємо їх як картки
+            if (products.length > 0) {
+                html += '<div class="products-container">';
+                products.forEach(product => {
+                    html += createProductCard(product);
+                });
+                html += '</div>';
+            }
+
+            html += `<div class="message-time">${getCurrentTime()}</div>
+                </div>
+            `;
+
+            messageDiv.innerHTML = html;
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // Форматування повідомлення бота (markdown-like)
+        function formatBotMessage(text) {
+            return escapeHtml(text)
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+        }
+
+        // Парсинг товарів з відповіді
+        function parseProducts(text) {
+            const products = [];
+            const lines = text.split('\n');
+            let currentProduct = null;
+
+            lines.forEach(line => {
+                // Шукаємо рядки з товарами (наприклад: "1. **Назва** від Бренд")
+                const productMatch = line.match(/^\d+\.\s+\*\*(.*?)\*\*\s+від\s+(.*?)$/);
+                if (productMatch) {
+                    if (currentProduct) {
+                        products.push(currentProduct);
+                    }
+                    currentProduct = {
+                        name: productMatch[1],
+                        brand: productMatch[2],
+                        price: null,
+                        form: null,
+                        sku: null,
+                        description: null
+                    };
+                } else if (currentProduct) {
+                    // Парсимо деталі товару
+                    if (line.includes('💰') && line.includes('Ціна:')) {
+                        const priceMatch = line.match(/Ціна:\s*([\d\s]+)/);
+                        if (priceMatch) currentProduct.price = priceMatch[1].trim();
+                    } else if (line.includes('📦') && line.includes('Форма:')) {
+                        const formMatch = line.match(/Форма:\s*(.+)/);
+                        if (formMatch) currentProduct.form = formMatch[1].trim();
+                    } else if (line.includes('🔢') && line.includes('Артикул:')) {
+                        const skuMatch = line.match(/Артикул:\s*(.+)/);
+                        if (skuMatch) currentProduct.sku = skuMatch[1].trim();
+                    } else if (line.includes('ℹ️')) {
+                        const descMatch = line.match(/ℹ️\s*(.+)/);
+                        if (descMatch) {
+                            if (currentProduct.description) {
+                                currentProduct.description += ' ' + descMatch[1].trim();
+                            } else {
+                                currentProduct.description = descMatch[1].trim();
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (currentProduct) {
+                products.push(currentProduct);
+            }
+
+            return products;
+        }
+
+        // Видалити товари з тексту для чистого відображення
+        function removeProductsFromText(text) {
+            // Видаляємо секцію з товарами
+            return text.split('📋 Рекомендовані товари:')[0].trim();
+        }
+
+        // Створити картку товару
+        function createProductCard(product) {
+            return `
+                <div class="product-card">
+                    <div class="product-header">
+                        <div class="product-name">${escapeHtml(product.name)}</div>
+                        ${product.price ? `<div class="product-price">${escapeHtml(product.price)} грн</div>` : ''}
+                    </div>
+                    <div class="product-brand">🏷️ ${escapeHtml(product.brand)}</div>
+                    ${product.description ? `<div style="color: var(--text-secondary); font-size: 14px; margin-top: 8px; line-height: 1.4;">${escapeHtml(product.description)}</div>` : ''}
+                    <div class="product-details">
+                        ${product.form ? `
+                            <div class="product-detail">
+                                <strong>Форма:</strong> ${escapeHtml(product.form)}
+                            </div>
+                        ` : ''}
+                        ${product.sku ? `
+                            <div class="product-detail">
+                                <strong>Артикул:</strong> ${escapeHtml(product.sku)}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Додати повідомлення про помилку
+        function addErrorMessage(text) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = `❌ ${text}`;
+            chatMessages.appendChild(errorDiv);
+            scrollToBottom();
+        }
+
+        // Показати індикатор друкування
+        function showTypingIndicator() {
+            typingIndicator.classList.add('active');
+            scrollToBottom();
+        }
+
+        // Сховати індикатор друкування
+        function hideTypingIndicator() {
+            typingIndicator.classList.remove('active');
+        }
+
+        // Очистити чат
+        async function clearChat() {
+            if (!sessionId) {
+                chatMessages.innerHTML = `
+                    <div class="welcome-message">
+                        <h2>Вітаємо! 👋</h2>
+                        <p>Я - ваш персональний консультант з вітамінів та БАДів.<br>
+                        Запитайте мене про будь-які вітаміни або добавки для вашого здоров'я!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (!confirm('Ви впевнені, що хочете очистити чат?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/chat/${sessionId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    sessionId = null;
+                    chatMessages.innerHTML = `
+                        <div class="welcome-message">
+                            <h2>Вітаємо! 👋</h2>
+                            <p>Я - ваш персональний консультант з вітамінів та БАДів.<br>
+                            Запитайте мене про будь-які вітаміни або добавки для вашого здоров'я!</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Помилка очищення чату:', error);
+                addErrorMessage('Не вдалося очистити чат');
+            }
+        }
+
+        // Автоскрол до низу
+        function scrollToBottom() {
+            setTimeout(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 100);
+        }
+
+        // Отримати поточний час
+        function getCurrentTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('uk-UA', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Екранування HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Фокус на поле вводу при завантаженні
+        window.addEventListener('load', () => {
+            messageInput.focus();
+        });
+
+        // Перевірка доступності API при завантаженні
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+
+                if (!response.ok || data.status !== 'healthy') {
+                    console.warn('API не повністю здоровий:', data);
+                }
+            } catch (error) {
+                console.error('Не вдалося підключитися до API:', error);
+                addErrorMessage('Не вдалося підключитися до сервера. Переконайтесь, що сервер запущено на localhost:3000');
+            }
+        }
+
+        // Підключити оператора
+        function connectOperator() {
+            alert('Функція підключення до оператора буде доступна найближчим часом.\n\nПоки що ви можете звернутися до нас через:\n• Telegram\n• Viber\n• Email: support@biotus.ua');
+        }
+
+        // Відкрити Telegram
+        function openTelegram() {
+            // Замініть на ваш реальний Telegram
+            window.open('https://t.me/biotus_support', '_blank');
+        }
+
+        // Відкрити Viber
+        function openViber() {
+            // Замініть на ваш реальний Viber
+            window.open('viber://pa?chatURI=biotus', '_blank');
+        }
+
+        checkAPIHealth();
+    </script>
+</body>
+</html>
