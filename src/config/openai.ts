@@ -43,13 +43,13 @@ export const getOpenAI = (): OpenAI => {
 };
 
 /**
- * Створення embedding для тексту
+ * Створення embedding для тексту (vitahub-xml використовує text-embedding-3-large)
  */
 export const createEmbedding = async (text: string): Promise<number[]> => {
   try {
     const client = getOpenAI();
     const response = await client.embeddings.create({
-      model: 'text-embedding-3-small',
+      model: 'text-embedding-3-large', // Обновлено для vitahub-xml (3072 dimensions)
       input: text,
       encoding_format: 'float',
     });

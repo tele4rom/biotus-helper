@@ -1,22 +1,22 @@
 /**
- * Метадані продукту в Pinecone
+ * Метадані продукту в Pinecone (vitahub-xml)
  */
 export interface ProductMetadata {
-  id: string;
-  product_id: string;
-  name: string;
-  brand: string;
-  sku: string;
-  price: number;
-  description: string;
-  categories: string;
-  form: string;
-  package: string;
-  flavor: string;
-  age: string;
-  active: boolean;
-  quantity: number;
-  status: boolean;
+  id: string; // ID товара
+  availability: string; // доступність к заказу (например: "in_stock")
+  brand: string; // бренд товара
+  categories: string[]; // категории товара (массив)
+  category_main: string; // главная категория
+  category_path: string; // путь категорий
+  description: string; // описание
+  gtin: string; // артикул или SKU товара
+  image_link: string; // ссылка на фото товара
+  link: string; // ссылка на товар
+  price: number; // цена товара
+  price_currency: string; // валюта цены (например: "UAH")
+  price_formatted: string; // форматированная цена (например: "485 UAH")
+  search_text: string; // текст для создания embeddings
+  title: string; // название товара
 }
 
 /**
@@ -53,6 +53,8 @@ export interface ConversationHistory {
   messages: ChatMessage[];
   createdAt: Date;
   lastUpdatedAt: Date;
+  shownProductIds: Set<string>; // ID товарів, які вже були показані користувачу
+  lastSearchQuery?: string; // Останній пошуковий запит для контекстних питань
 }
 
 /**
@@ -61,6 +63,20 @@ export interface ConversationHistory {
 export interface ChatRequest {
   message: string;
   sessionId?: string;
+}
+
+/**
+ * Структурований товар для фронтенду
+ */
+export interface StructuredProduct {
+  id: string;
+  title: string;
+  brand: string;
+  price: string;
+  article: string;
+  image: string;
+  link: string;
+  reason: string;
 }
 
 /**
@@ -74,6 +90,7 @@ export interface ChatResponse {
     isRelevant: boolean;
     reason?: string;
   };
+  products?: StructuredProduct[] | null; // Додано структуровані товари
 }
 
 /**
@@ -92,9 +109,8 @@ export interface SearchConfig {
   topK: number;
   minSimilarityScore: number;
   requiredBrands: string[];
-  filter: {
-    status: boolean;
-    quantity: { $gt: number };
+  filter?: {
+    availability?: string; // например: "in_stock"
   };
 }
 

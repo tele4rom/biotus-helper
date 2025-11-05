@@ -60,38 +60,77 @@ export const hasRequiredBrand = (products: any[]): boolean => {
 };
 
 /**
- * Фільтрація товарів за доступністю
+ * Фільтрація товарів за доступністю (vitahub-xml format)
  */
 export const filterAvailableProducts = (products: any[]): any[] => {
   return products.filter((product) => {
     const metadata = product.metadata;
-    return (
-      metadata &&
-      metadata.status === true &&
-      metadata.quantity > 0 &&
-      metadata.active !== false
-    );
+    // В новом формате просто проверяем наличие метаданных
+    // Можно добавить проверку availability: 'in_stock' если нужно
+    return metadata && metadata.title && metadata.brand;
   });
+};
+
+/**
+ * Список відомих брендів (пріоритет після Biotus/My Nutri Week)
+ */
+const KNOWN_PREMIUM_BRANDS = [
+  'now foods',
+  'solgar',
+  'nature\'s way',
+  'doctor\'s best',
+  'life extension',
+  'jarrow formulas',
+  'thorne',
+  'pure encapsulations',
+  'nordic naturals',
+  'garden of life',
+  'california gold nutrition',
+  'natrol',
+  'bluebonnet',
+  'nature\'s plus',
+  'solaray',
+  'source naturals',
+  'healthy origins',
+];
+
+/**
+ * Визначення пріоритету бренду
+ */
+const getBrandPriority = (brand: string): number => {
+  const lowerBrand = brand.toLowerCase();
+
+  // Пріоритет 1: Biotus та My Nutri Week (найвищий)
+  if (lowerBrand.includes('biotus') || lowerBrand.includes('my nutri week')) {
+    return 1;
+  }
+
+  // Пріоритет 2: Відомі преміум бренди
+  if (KNOWN_PREMIUM_BRANDS.some(b => lowerBrand.includes(b))) {
+    return 2;
+  }
+
+  // Пріоритет 3: Інші бренди
+  return 3;
 };
 
 /**
  * Сортування товарів за релевантністю та брендом
  */
 export const sortProductsByRelevance = (products: any[]): any[] => {
-  const requiredBrands = ['biotus', 'my nutri week'];
-
   return products.sort((a, b) => {
-    const brandA = a.metadata?.brand?.toLowerCase() || '';
-    const brandB = b.metadata?.brand?.toLowerCase() || '';
+    const brandA = a.metadata?.brand || '';
+    const brandB = b.metadata?.brand || '';
 
-    const aHasRequired = requiredBrands.some((brand) => brandA.includes(brand));
-    const bHasRequired = requiredBrands.some((brand) => brandB.includes(brand));
+    const priorityA = getBrandPriority(brandA);
+    const priorityB = getBrandPriority(brandB);
 
-    // Спочатку товари з потрібними брендами
-    if (aHasRequired && !bHasRequired) return -1;
-    if (!aHasRequired && bHasRequired) return 1;
+    // Спочатку сортуємо за пріоритетом бренду
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
 
-    // Потім за score (якщо є)
+    // Потім за score (якщо пріоритет однаковий)
     return (b.score || 0) - (a.score || 0);
   });
 };
@@ -159,17 +198,18 @@ export const formatPrice = (price: number): string => {
 };
 
 /**
- * Форматування товару для відображення
+ * Форматування товару для відображення (vitahub-xml format)
  */
 export const formatProductForDisplay = (product: any): string => {
   const metadata = product.metadata;
 
   return `
-Товар: ${metadata.name}
+Товар: ${metadata.title}
 Бренд: ${metadata.brand}
-Ціна: ${formatPrice(metadata.price)}
-Форма: ${metadata.form || 'Не вказано'}
+Ціна: ${metadata.price_formatted}
+Категорія: ${metadata.category_main}
 Опис: ${metadata.description || 'Немає опису'}
-SKU: ${metadata.sku}
+Артикул: ${metadata.gtin}
+Посилання: ${metadata.link}
 `.trim();
 };

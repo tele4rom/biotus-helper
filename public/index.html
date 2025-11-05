@@ -294,13 +294,21 @@
             padding: 16px;
             border: 1px solid var(--border-color);
             transition: all 0.3s;
-            cursor: pointer;
+            overflow: hidden;
         }
 
         .product-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(75, 132, 81, 0.2);
             border-color: var(--accent-color);
+        }
+
+        .product-card img {
+            transition: transform 0.3s;
+        }
+
+        .product-card:hover img {
+            transform: scale(1.05);
         }
 
         .product-header {
@@ -320,9 +328,8 @@
         .product-price {
             font-size: 18px;
             font-weight: 700;
-            color: var(--success-color);
-            white-space: nowrap;
-            margin-left: 12px;
+            color: #000000;
+            margin-top: 4px;
         }
 
         .product-brand {
@@ -541,6 +548,20 @@
             .product-details {
                 grid-template-columns: 1fr;
             }
+
+            .product-card {
+                padding: 12px;
+            }
+
+            .product-card > div:first-child {
+                flex-direction: column !important;
+            }
+
+            .product-card img {
+                width: 100% !important;
+                max-width: 200px !important;
+                margin: 0 auto !important;
+            }
         }
 
         /* Info Badge */
@@ -690,9 +711,9 @@
                 // Ховаємо індикатор друкування
                 hideTypingIndicator();
 
-                // Додаємо відповідь бота
+                // Додаємо відповідь бота з товарами
                 if (data.data && data.data.response) {
-                    addBotMessage(data.data.response, data.data.productsFound);
+                    addBotMessage(data.data.response, data.data.productsFound, data.data.products);
                 }
 
             } catch (error) {
@@ -723,26 +744,22 @@
         }
 
         // Додати повідомлення бота
-        function addBotMessage(text, productsFound = 0) {
+        function addBotMessage(text, productsFound = 0, productsArray = null) {
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message bot';
-
-            // Парсимо товари з відповіді (якщо є структура)
-            const products = parseProducts(text);
-            const messageText = products.length > 0 ? removeProductsFromText(text) : text;
 
             let html = `
                 <div class="message-avatar">
                     <img src="/assets/logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                 </div>
                 <div class="message-content">
-                    <div class="message-bubble">${formatBotMessage(messageText)}</div>
+                    <div class="message-bubble">${formatBotMessage(text)}</div>
             `;
 
-            // Якщо знайдено товари, додаємо їх як картки
-            if (products.length > 0) {
+            // Якщо є товари з API, додаємо їх як карточки
+            if (productsArray && Array.isArray(productsArray) && productsArray.length > 0) {
                 html += '<div class="products-container">';
-                products.forEach(product => {
+                productsArray.forEach(product => {
                     html += createProductCard(product);
                 });
                 html += '</div>';
@@ -781,20 +798,34 @@
                         name: productMatch[1],
                         brand: productMatch[2],
                         price: null,
-                        form: null,
+                        category: null,
                         sku: null,
-                        description: null
+                        description: null,
+                        image: null,
+                        link: null
                     };
                 } else if (currentProduct) {
+                    // Парсимо фото товару (![Фото товару](url))
+                    const imageMatch = line.match(/!\[.*?\]\((https?:\/\/[^\)]+)\)/);
+                    if (imageMatch) {
+                        currentProduct.image = imageMatch[1];
+                    }
+
+                    // Парсимо посилання на товар ([Переглянути товар](url))
+                    const linkMatch = line.match(/\[Переглянути товар\]\((https?:\/\/[^\)]+)\)/);
+                    if (linkMatch) {
+                        currentProduct.link = linkMatch[1];
+                    }
+
                     // Парсимо деталі товару
                     if (line.includes('💰') && line.includes('Ціна:')) {
-                        const priceMatch = line.match(/Ціна:\s*([\d\s]+)/);
+                        const priceMatch = line.match(/Ціна:\s*(.+?)(?:\s|$)/);
                         if (priceMatch) currentProduct.price = priceMatch[1].trim();
-                    } else if (line.includes('📦') && line.includes('Форма:')) {
-                        const formMatch = line.match(/Форма:\s*(.+)/);
-                        if (formMatch) currentProduct.form = formMatch[1].trim();
+                    } else if (line.includes('📦') && line.includes('Категорія:')) {
+                        const categoryMatch = line.match(/Категорія:\s*(.+)/);
+                        if (categoryMatch) currentProduct.category = categoryMatch[1].trim();
                     } else if (line.includes('🔢') && line.includes('Артикул:')) {
-                        const skuMatch = line.match(/Артикул:\s*(.+)/);
+                        const skuMatch = line.match(/Артикул:\s*(.+?)(?:\s+←|$)/);
                         if (skuMatch) currentProduct.sku = skuMatch[1].trim();
                     } else if (line.includes('ℹ️')) {
                         const descMatch = line.match(/ℹ️\s*(.+)/);
@@ -824,26 +855,47 @@
 
         // Створити картку товару
         function createProductCard(product) {
+            // Підтримка обох форматів: старий (name/sku/description) і новий (title/article/reason)
+            const title = product.title || product.name;
+            const article = product.article || product.sku;
+            const reason = product.reason || product.description;
+
             return `
                 <div class="product-card">
-                    <div class="product-header">
-                        <div class="product-name">${escapeHtml(product.name)}</div>
-                        ${product.price ? `<div class="product-price">${escapeHtml(product.price)} грн</div>` : ''}
-                    </div>
-                    <div class="product-brand">🏷️ ${escapeHtml(product.brand)}</div>
-                    ${product.description ? `<div style="color: var(--text-secondary); font-size: 14px; margin-top: 8px; line-height: 1.4;">${escapeHtml(product.description)}</div>` : ''}
-                    <div class="product-details">
-                        ${product.form ? `
-                            <div class="product-detail">
-                                <strong>Форма:</strong> ${escapeHtml(product.form)}
+                    <div style="display: flex; gap: 16px; margin-bottom: 12px;">
+                        ${product.image ? `
+                            <div style="width: 120px; min-width: 120px; height: 120px; overflow: hidden; border-radius: 8px; border: 1px solid var(--border-color);">
+                                <img src="${escapeHtml(product.image)}"
+                                     alt="${escapeHtml(title)}"
+                                     style="width: 100%; height: 100%; object-fit: contain;"
+                                     onerror="this.style.display='none'">
                             </div>
                         ` : ''}
-                        ${product.sku ? `
-                            <div class="product-detail">
-                                <strong>Артикул:</strong> ${escapeHtml(product.sku)}
+                        <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div>
+                                <div class="product-name" style="font-weight: 600; margin-bottom: 8px;">${escapeHtml(title)}</div>
+                                <div class="product-brand" style="margin-bottom: 6px;">Бренд: ${escapeHtml(product.brand)}</div>
+                                ${product.price ? `<div class="product-price" style="font-weight: 700; color: var(--accent-color); margin-bottom: 6px;">💰 ${escapeHtml(product.price)}</div>` : ''}
+                                ${article ? `<div class="product-detail" style="font-size: 13px; color: var(--text-secondary);">📦 Артикул: ${escapeHtml(article)}</div>` : ''}
                             </div>
-                        ` : ''}
+                        </div>
                     </div>
+                    ${reason ? `
+                        <div style="color: var(--text-secondary); font-size: 14px; line-height: 1.5; padding: 12px 0; border-top: 1px solid var(--border-color);">
+                            ${escapeHtml(reason)}
+                        </div>
+                    ` : ''}
+                    ${product.link ? `
+                        <a href="${escapeHtml(product.link)}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="product-button"
+                           style="display: block; padding: 12px 20px; background: var(--accent-color); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; text-align: center; font-size: 14px; transition: all 0.3s;"
+                           onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(75, 132, 81, 0.3)'"
+                           onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                            🛒 ПЕРЕГЛЯНУТИ ТОВАР
+                        </a>
+                    ` : ''}
                 </div>
             `;
         }
